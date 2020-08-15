@@ -1,12 +1,12 @@
 
 //// CHANGE FOR YOUR WIFI SSID AND PASSWORD////
-#define WIFI_SSID "NETGEAR"
-#define WIFI_PASS "RedHogar1"
+#define WIFI_SSID ""
+#define WIFI_PASS ""
 ///////////////////////////////////////////////
 
 //// CHANGE FOR YOUR IO_USERNAME AND IO_KEY////
-#define MQTT_NAME "luismiguel"
-#define MQTT_PASS "aio_hgxm455x6RszCOUH9y6KIhk5RFUZ"
+#define MQTT_NAME "user"
+#define MQTT_PASS "pass"
 ///////////////////////////////////////////////
 
 
@@ -17,7 +17,11 @@
 #define FEED_STATE "estado_rele"
 #define MQTT_SERV "io.adafruit.com"
 #define MQTT_PORT 1883
-int RELE = D1;
+const byte switchHome = D8;
+int Relay = D1;
+int lightState = HIGH;
+
+
 
 WiFiClient client;
 Adafruit_MQTT_Client mqtt(&client, MQTT_SERV, MQTT_PORT, MQTT_NAME, MQTT_PASS);
@@ -26,27 +30,27 @@ Adafruit_MQTT_Subscribe rele_on_off = Adafruit_MQTT_Subscribe(&mqtt, MQTT_NAME"/
 
 void setup()
 {
-  Serial.begin(9600);
-  pinMode(RELE, OUTPUT);
-  digitalWrite(RELE, HIGH);
+  pinMode(Relay, OUTPUT);
+  digitalWrite(Relay, HIGH);
 
   //Connect to WiFi
-  Serial.print("\n\nConnecting Wifi>");
   WiFi.begin(WIFI_SSID, WIFI_PASS);
 
   while (WiFi.status() != WL_CONNECTED)
   {
-    Serial.print(">");
     delay(50);
   }
-  Serial.println("OK!");
 
   //Subscribe to the onoff topic
   mqtt.subscribe(&rele_on_off);
+
+  pinMode(switchHome, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(switchHome), switchChangeDetector, CHANGE);
+
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, !lightState);
 }
 
-
-//probando git
 
 void loop()
 {
@@ -61,20 +65,20 @@ void loop()
     //If we're in here, a subscription updated...
     if (subscription == &rele_on_off)
     {
-      //Print the new value to the serial monitor
-      Serial.print("Rele_ON_OFF: ");
-      Serial.println((char*) rele_on_off.lastread);
 
       //If the new value is  "ON", turn the light on.
       //Otherwise, turn it off.
       if (!strcmp((char*) rele_on_off.lastread, "ON"))
       {
         //active low logic
-        digitalWrite(RELE, HIGH);
+        digitalWrite(Relay, HIGH);
+        lightState = HIGH;
       }
       else if (!strcmp((char*) rele_on_off.lastread, "OFF"))
       {
-        digitalWrite(RELE, LOW);
+        //active low logic
+        digitalWrite(Relay, LOW);
+        lightState = LOW;
       }
     }
   }
@@ -94,12 +98,9 @@ void MQTT_connect()
 
   mqtt.disconnect();
 
-  Serial.print("Connecting to MQTT... ");
   uint8_t retries = 3;
   while ((ret = mqtt.connect()) != 0) // connect will return 0 for connected
   {
-    Serial.println(mqtt.connectErrorString(ret));
-    Serial.println("Retrying MQTT connection in 5 seconds...");
     mqtt.disconnect();
     delay(5000);  // wait 5 seconds
     retries--;
@@ -108,5 +109,10 @@ void MQTT_connect()
       ESP.reset();
     }
   }
-  Serial.println("MQTT Connected!");
+}
+
+ICACHE_RAM_ATTR void switchChangeDetector() {
+  lightState = !(lightState);
+  digitalWrite(Relay, lightState);
+  digitalWrite(LED_BUILTIN, !lightState);
 }
