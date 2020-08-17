@@ -1,7 +1,6 @@
-
 //// CHANGE FOR YOUR WIFI SSID AND PASSWORD////
-#define WIFI_SSID ""
-#define WIFI_PASS ""
+#define WIFI_SSID "wireless"
+#define WIFI_PASS "pass"
 ///////////////////////////////////////////////
 
 //// CHANGE FOR YOUR IO_USERNAME AND IO_KEY////
@@ -17,9 +16,19 @@
 #define FEED_STATE "estado_rele"
 #define MQTT_SERV "io.adafruit.com"
 #define MQTT_PORT 1883
-const byte switchHome = D8;
+const byte switchHome = D5;
 int Relay = D1;
-int lightState = HIGH;
+int lightState = LOW;
+int actualSwitchState;
+int lastSwitchState;
+
+
+/////////////////////////////////////////////////
+
+// the following variables are unsigned longs because the time, measured in
+// milliseconds, will quickly become a bigger number than can be stored in an int.
+unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
+unsigned long debounceDelay = 1000;    // the debounce time; increase if the output flickers
 
 
 
@@ -31,7 +40,7 @@ Adafruit_MQTT_Subscribe rele_on_off = Adafruit_MQTT_Subscribe(&mqtt, MQTT_NAME"/
 void setup()
 {
   pinMode(Relay, OUTPUT);
-  digitalWrite(Relay, HIGH);
+  digitalWrite(Relay, lightState);
 
   //Connect to WiFi
   WiFi.begin(WIFI_SSID, WIFI_PASS);
@@ -44,14 +53,14 @@ void setup()
   //Subscribe to the onoff topic
   mqtt.subscribe(&rele_on_off);
 
-  pinMode(switchHome, INPUT_PULLUP);
+  pinMode(switchHome, INPUT);
   attachInterrupt(digitalPinToInterrupt(switchHome), switchChangeDetector, CHANGE);
 
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, !lightState);
+
+  lastSwitchState = digitalRead(switchHome);
 }
-
-
 
 
 void loop()
@@ -75,12 +84,14 @@ void loop()
         //active low logic
         digitalWrite(Relay, HIGH);
         lightState = HIGH;
+        digitalWrite(LED_BUILTIN, !lightState);
       }
       else if (!strcmp((char*) rele_on_off.lastread, "OFF"))
       {
         //active low logic
         digitalWrite(Relay, LOW);
         lightState = LOW;
+        digitalWrite(LED_BUILTIN, !lightState);
       }
     }
   }
@@ -114,7 +125,23 @@ void MQTT_connect()
 }
 
 ICACHE_RAM_ATTR void switchChangeDetector() {
-  lightState = !(lightState);
-  digitalWrite(Relay, lightState);
-  digitalWrite(LED_BUILTIN, !lightState);
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+
+    actualSwitchState = digitalRead(switchHome);
+    
+    if (lastSwitchState != actualSwitchState) {
+      
+      lightState = !(lightState);
+      digitalWrite(Relay, lightState);
+      
+      // set the internal LED:
+      digitalWrite(LED_BUILTIN, !lightState);
+      
+      lastSwitchState = digitalRead(switchHome);
+    }
+
+  }
+
+  lastDebounceTime = millis();
 }
