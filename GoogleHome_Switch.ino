@@ -35,7 +35,7 @@ unsigned long debounceDelay = 1000;    // the debounce time; increase if the out
 WiFiClient client;
 Adafruit_MQTT_Client mqtt(&client, MQTT_SERV, MQTT_PORT, MQTT_NAME, MQTT_PASS);
 
-Adafruit_MQTT_Subscribe rele_on_off = Adafruit_MQTT_Subscribe(&mqtt, MQTT_NAME"/feeds/Pergola");
+Adafruit_MQTT_Subscribe rele_on_off = Adafruit_MQTT_Subscribe(&mqtt, MQTT_NAME"/feeds/NameFeed");
 
 void setup()
 {
