@@ -1,6 +1,7 @@
+
 //// CHANGE FOR YOUR WIFI SSID AND PASSWORD////
-#define WIFI_SSID "wireless"
-#define WIFI_PASS "pass"
+#define WIFI_SSID "BSSID"
+#define WIFI_PASS "Pass-WIFI"
 ///////////////////////////////////////////////
 
 //// CHANGE FOR YOUR IO_USERNAME AND IO_KEY////
@@ -17,7 +18,7 @@
 #define MQTT_SERV "io.adafruit.com"
 #define MQTT_PORT 1883
 const byte switchHome = D5;
-int Relay = D1;
+int Relay = D3; //Pin to avoid ESP.reset() flickers
 int lightState = LOW;
 int actualSwitchState;
 int lastSwitchState;
@@ -28,19 +29,18 @@ int lastSwitchState;
 // the following variables are unsigned longs because the time, measured in
 // milliseconds, will quickly become a bigger number than can be stored in an int.
 unsigned long lastDebounceTime = 0;  // the last time the output pin was toggled
-unsigned long debounceDelay = 1000;    // the debounce time; increase if the output flickers
+unsigned long debounceDelay = 150;    // the debounce time; increase if the output flickers
 
 
 
 WiFiClient client;
 Adafruit_MQTT_Client mqtt(&client, MQTT_SERV, MQTT_PORT, MQTT_NAME, MQTT_PASS);
 
-Adafruit_MQTT_Subscribe rele_on_off = Adafruit_MQTT_Subscribe(&mqtt, MQTT_NAME"/feeds/NameFeed");
+Adafruit_MQTT_Subscribe rele_on_off = Adafruit_MQTT_Subscribe(&mqtt, MQTT_NAME"/feeds/Pergola");
 
 void setup()
-{
+{  
   pinMode(Relay, OUTPUT);
-  digitalWrite(Relay, lightState);
 
   //Connect to WiFi
   WiFi.begin(WIFI_SSID, WIFI_PASS);
@@ -103,7 +103,6 @@ void MQTT_connect()
   //  // Stop if already connected
   if (mqtt.connected() && mqtt.ping())
   {
-    //    mqtt.disconnect();
     return;
   }
 
